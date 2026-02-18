@@ -1,7 +1,7 @@
 package com.theacademyyouneed.the_academy_you_need_backend.controller;
 
 import com.theacademyyouneed.the_academy_you_need_backend.dto.UserDTO;
-import com.theacademyyouneed.the_academy_you_need_backend.UserService;
+import com.theacademyyouneed.the_academy_you_need_backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

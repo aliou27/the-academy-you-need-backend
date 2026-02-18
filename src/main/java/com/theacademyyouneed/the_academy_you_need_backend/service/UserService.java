@@ -36,7 +36,7 @@ public class UserService {
                 user.getFirstName(),
                 user.getLastName(),
                 user.getRole().name(),
-               // user.getEmailVerified()
+                user.getEmailVerified()
         );
     }
 }
