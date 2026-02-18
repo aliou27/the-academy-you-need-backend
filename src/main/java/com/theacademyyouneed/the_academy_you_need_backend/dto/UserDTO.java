@@ -16,4 +16,8 @@ public class UserDTO {
     private Boolean emailVerified;
     private String createdAt;
     private String updatedAt;
+
+    public UserDTO(Long id, String email, String firstName, String lastName, String name, Object emailVerified) {
+
+    }
 }
