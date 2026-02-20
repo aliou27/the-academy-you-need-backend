@@ -3,6 +3,7 @@ package com.theacademyyouneed.the_academy_you_need_backend.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.jspecify.annotations.Nullable;
 
 @Data
 @NoArgsConstructor
@@ -16,8 +17,4 @@ public class UserDTO {
     private Boolean emailVerified;
     private String createdAt;
     private String updatedAt;
-
-    public UserDTO(Long id, String email, String firstName, String lastName, String name, Object emailVerified) {
-
-    }
 }

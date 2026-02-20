@@ -51,6 +51,10 @@ public class User {
         return  emailVerified;
     }
 
+    public Object isEmailVerified() {
+        return emailVerified;
+    }
+
     public enum Role {
         USER, ADMIN
     }
