@@ -1,31 +1,66 @@
 package com.theacademyyouneed.the_academy_you_need_backend.config;
 
+import com.theacademyyouneed.the_academy_you_need_backend.security.JwtAuthenticationFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsPasswordService;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
+@RequiredArgsConstructor
+@EnableWebSecurity
 public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Désactive Basic Auth (le truc qui demande username/password en popup ou header)
+                // Désactive TOUT ce qui peut créer une session ou un cookie
+                .csrf(csrf -> csrf.disable())
+                .formLogin(form -> form.disable())
                 .httpBasic(httpBasic -> httpBasic.disable())
 
-                // Autorise tout le monde sur tes endpoints API pour le moment
+                // Autorisations explicites
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/**").permitAll()     // ← TOUS tes /api/... publics
-                        .anyRequest().authenticated()               // le reste (si tu ajoutes pages web) protégé
+                        // Login et tout /api/auth sont 100% publics
+                        .requestMatchers("/api/auth/**").permitAll()
+                        // Tes endpoints de test publics
+                        .requestMatchers("/api/users/**").permitAll()
+                        // Tout le reste nécessite token
+                        .anyRequest().authenticated()
                 )
 
-                // Optionnel : si tu veux garder une page login pour futur dashboard
-                .formLogin(form -> form.disable())              // ou .permitAll() si tu veux la garder
+                // Pas de session, pas de cookie JSSESSIONID
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
 
-                // Désactive CSRF pour les tests API (attention : réactive-le en prod pour POST/PUT/DELETE)
-                .csrf(csrf -> csrf.disable());
+                // Filtre JWT en premier
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 }
