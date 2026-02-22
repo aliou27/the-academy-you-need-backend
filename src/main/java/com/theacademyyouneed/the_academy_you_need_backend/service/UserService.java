@@ -3,14 +3,12 @@ package com.theacademyyouneed.the_academy_you_need_backend.service;
 import com.theacademyyouneed.the_academy_you_need_backend.dto.UserDTO;
 import com.theacademyyouneed.the_academy_you_need_backend.entity.User;
 import com.theacademyyouneed.the_academy_you_need_backend.repository.UserRepository;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -18,62 +16,81 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;
 
-    public List<UserDTO> getAllUsers() {
-        return userRepository.findAll().stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
-    }
+    // ==========================
+    // CREATE / REGISTER
+    // ==========================
+    public UserDTO registerUser(UserDTO userDTO) {
 
-    public UserDTO getUserById(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
-        return toDTO(user);
-    }
-
-    public UserDTO createUser(String email, String password, String firstName, String lastName) {
-        // Validate required fields
-        if (email == null || email.isBlank()) {
-            throw new RuntimeException("Email is required");
-        }
-        if (password == null || password.isBlank()) {
-            throw new RuntimeException("Password is required");
-        }
-
-        if (userRepository.existsByEmail(email)) {
-            throw new RuntimeException("Email already exists");
+        if (userRepository.existsByEmail(userDTO.getEmail())) {
+            throw new IllegalArgumentException("Email already exists");
         }
 
         User user = User.builder()
-                .email(email)
-                .password(passwordEncoder.encode(password))
-                .firstName(firstName)
-                .lastName(lastName)
+                .email(userDTO.getEmail())
+                .password(passwordEncoder.encode(userDTO.getPassword()))   // si LoginRequest a password                .firstName(userDTO.getFirstName())
+                .lastName(userDTO.getLastName())
                 .role(User.Role.USER)
                 .emailVerified(false)
                 .build();
 
-        User saved = userRepository.save(user);
-        return toDTO(saved);
+        return toDTO(userRepository.save(user));
     }
 
+    // ==========================
+    // READ
+    // ==========================
+    @Transactional(readOnly = true)
+    public List<UserDTO> getAllUsers() {
+        return userRepository.findAll()
+                .stream()
+                .map(this::toDTO)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public UserDTO getUserById(Long id) {
+        return toDTO(findUserOrThrow(id));
+    }
+
+    // ==========================
+    // UPDATE
+    // ==========================
     public UserDTO updateUser(Long id, String firstName, String lastName) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
 
-        if (firstName != null) user.setFirstName(firstName);
-        if (lastName != null) user.setLastName(lastName);
+        User user = findUserOrThrow(id);
 
-        User updated = userRepository.save(user);
-        return toDTO(updated);
+        if (firstName != null && !firstName.isBlank()) {
+            user.setFirstName(firstName);
+        }
+
+        if (lastName != null && !lastName.isBlank()) {
+            user.setLastName(lastName);
+        }
+
+        return toDTO(user);
     }
 
+    // ==========================
+    // DELETE
+    // ==========================
     public void deleteUser(Long id) {
+
         if (!userRepository.existsById(id)) {
-            throw new RuntimeException("User not found with id: " + id);
+            throw new IllegalArgumentException("User not found with id: " + id);
         }
+
         userRepository.deleteById(id);
+    }
+
+    // ==========================
+    // PRIVATE HELPERS
+    // ==========================
+    private User findUserOrThrow(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("User not found with id: " + id));
     }
 
     private UserDTO toDTO(User user) {
@@ -88,19 +105,4 @@ public class UserService {
                 user.getUpdatedAt() != null ? user.getUpdatedAt().toString() : null
         );
     }
-
-    public UserDTO registerUser(UserDTO userDTO) {
-        if (!userRepository.existsByEmail(userDTO.getEmail())) {
-            throw new RuntimeException("Email already exists");
-        }
-        User user = User.builder().build();
-        user.setFirstName(userDTO.getFirstName());
-        user.setLastName(userDTO.getLastName());
-        user.setEmail(userDTO.getEmail());
-
-        user = userRepository.save(user);   // ← ultra important !
-
-        return toDTO(user);
-    }
-
 }
