@@ -1,4 +1,4 @@
-package com.theacademyyouneed.the_academy_you_need_backend.security;  // adapte ton package
+package com.theacademyyouneed.the_academy_you_need_backend.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;

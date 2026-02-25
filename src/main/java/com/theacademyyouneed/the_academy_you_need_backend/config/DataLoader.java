@@ -24,7 +24,6 @@ public class DataLoader {
         return args -> {
             if (userRepository.count() == 0) {
                 BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-
                 // Create admin user
                 User admin = User.builder()
                         .email("admin@test.com")
@@ -34,7 +33,6 @@ public class DataLoader {
                         .role(User.Role.ADMIN)
                         .emailVerified(true)
                         .build();
-
                 // Create regular user
                 User regular = User.builder()
                         .email("user@test.com")
@@ -48,7 +46,7 @@ public class DataLoader {
                 userRepository.save(admin);
                 userRepository.save(regular);
 
-                log.info("✅ Sample data loaded:");
+                log.info(" Sample data loaded:");
                 log.info("   - admin@test.com / password123 (ADMIN)");
                 log.info("   - user@test.com / password123 (USER)");
             }
