@@ -2,6 +2,7 @@ package com.theacademyyouneed.the_academy_you_need_backend.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -13,16 +14,24 @@ import java.util.function.Function;
 @Component
 public class Jwtutil {
 
+    private SecretKey signingKey;
+
     @Value("${jwt.secret}")
     private String secret;
 
     @Value("${jwt.expiration}")
     private long expirationMs;
 
-    private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes());
+    // @PostConstruct runs automatically once when Spring starts the app
+    @PostConstruct
+    private void init() {
+        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes());
     }
 
+    // Now this just returns the already-built key
+    private SecretKey getSigningKey() {
+        return signingKey;
+    }
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);

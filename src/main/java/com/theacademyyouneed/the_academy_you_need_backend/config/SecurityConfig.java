@@ -35,12 +35,11 @@ public class SecurityConfig {
 
                 // Autorisations explicites
                 .authorizeHttpRequests(auth -> auth
-                        // Login et tout /api/auth sont 100% publics
-                        .requestMatchers("/api/auth/**").permitAll()
-                        // Tes endpoints de test publics
-                        .requestMatchers("/api/users/**").permitAll()
-                        // Tout le reste nécessite token
-                        .anyRequest().authenticated()
+                        .requestMatchers("/api/auth/**").permitAll()           // public
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")     // ADMIN only
+                        .requestMatchers("/api/users/**").hasRole("ADMIN")     // ADMIN only
+                        .requestMatchers("/api/courses/**").hasAnyRole("USER", "ADMIN") // les deux
+                        .anyRequest().authenticated()                          // reste = connecté
                 )
 
                 // Pas de session, pas de cookie JSSESSIONID
