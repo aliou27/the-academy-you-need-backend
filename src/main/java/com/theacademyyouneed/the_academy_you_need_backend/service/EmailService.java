@@ -55,10 +55,7 @@ public class EmailService {
         sendHtmlEmail(toEmail, subject, html);
     }
 
-    /**
-     * Sends a password reset link.
-     * Ready to use in Phase 2.
-     */
+
     public void sendPasswordResetEmail(String toEmail, String firstName, String token) {
         String resetUrl = frontendUrl + "/reset-password?token=" + token;
 

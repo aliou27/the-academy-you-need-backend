@@ -4,6 +4,7 @@ import com.theacademyyouneed.the_academy_you_need_backend.security.JwtAuthentica
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -35,11 +36,14 @@ public class SecurityConfig {
 
                 // Autorisations explicites
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()           // public
+                        .requestMatchers("/api/auth/**").permitAll()// public
+
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")     // ADMIN only
                         .requestMatchers("/api/users/**").hasRole("ADMIN")     // ADMIN only
                         .requestMatchers("/api/courses/**").hasAnyRole("USER", "ADMIN") // les deux
-                        .anyRequest().authenticated()                          // reste = connecté
+                        .requestMatchers(HttpMethod.GET, "/api/content", "/api/content/**").permitAll()  // public listing
+                        .requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .anyRequest().authenticated()// reste = connecté
                 )
 
                 // Pas de session, pas de cookie JSSESSIONID
