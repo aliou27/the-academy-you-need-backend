@@ -7,6 +7,7 @@ import com.theacademyyouneed.the_academy_you_need_backend.repository.UserReposit
 import com.theacademyyouneed.the_academy_you_need_backend.repository.VerificationTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,17 +23,11 @@ public class EmailVerificationService {
     private final VerificationTokenRepository tokenRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
 
-    // ─────────────────────────────────────────────
-    //  SEND VERIFICATION EMAIL
-    // ─────────────────────────────────────────────
+    // EMAIL VERIFICATION
 
-    /**
-     * Creates a token and sends the verification email.
-     * Called right after registration in AuthService.
-     */
     public void sendVerificationEmail(User user) {
-        // UUID token — cryptographically random, unguessable
         String rawToken = UUID.randomUUID().toString();
 
         VerificationToken verificationToken = VerificationToken.builder()
@@ -43,61 +38,24 @@ public class EmailVerificationService {
                 .build();
 
         tokenRepository.save(verificationToken);
-
-        emailService.sendVerificationEmail(
-                user.getEmail(),
-                user.getFirstName(),
-                rawToken
-        );
-
+        emailService.sendVerificationEmail(user.getEmail(), user.getFirstName(), rawToken);
         log.info("Verification email sent to: {}", user.getEmail());
     }
 
-    // ─────────────────────────────────────────────
-    //  VERIFY TOKEN (when user clicks the link)
-    // ─────────────────────────────────────────────
-
-    /**
-     * Validates the token and marks the user's email as verified.
-     * Returns the user's email on success (used to auto-login after verification).
-     */
     public String verifyEmail(String rawToken) {
-        VerificationToken token = tokenRepository.findByToken(rawToken)
-                .orElseThrow(() -> new RuntimeException("Lien de vérification invalide"));
+        VerificationToken token = findValidToken(rawToken, TokenType.EMAIL_VERIFICATION);
 
-        if (token.isUsed()) {
-            throw new RuntimeException("Ce lien a déjà été utilisé");
-        }
-
-        if (token.isExpired()) {
-            throw new RuntimeException("Ce lien a expiré. Demandez un nouveau lien.");
-        }
-
-        if (token.getType() != TokenType.EMAIL_VERIFICATION) {
-            throw new RuntimeException("Type de token invalide");
-        }
-
-        // Mark token as used
         token.setUsed(true);
         tokenRepository.save(token);
 
-        // Verify the user
         User user = token.getUser();
         user.setEmailVerified(true);
         userRepository.save(user);
 
-        log.info("Email verified for user: {}", user.getEmail());
-
+        log.info("Email verified for: {}", user.getEmail());
         return user.getEmail();
     }
 
-    // ─────────────────────────────────────────────
-    //  RESEND VERIFICATION EMAIL
-    // ─────────────────────────────────────────────
-
-    /**
-     * Lets a user request a new verification email if theirs expired.
-     */
     public void resendVerificationEmail(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
@@ -107,5 +65,58 @@ public class EmailVerificationService {
         }
 
         sendVerificationEmail(user);
+    }
+
+    // PASSWORD RESET
+
+    public void sendPasswordResetEmail(String email) {
+        userRepository.findByEmail(email.toLowerCase().trim()).ifPresent(user -> {
+            String rawToken = UUID.randomUUID().toString();
+
+            VerificationToken resetToken = VerificationToken.builder()
+                    .user(user)
+                    .token(rawToken)
+                    .type(TokenType.PASSWORD_RESET)
+                    .expiresAt(LocalDateTime.now().plusHours(1))
+                    .build();
+
+            tokenRepository.save(resetToken);
+            emailService.sendPasswordResetEmail(user.getEmail(), user.getFirstName(), rawToken);
+            log.info("Password reset email sent to: {}", user.getEmail());
+        });
+    }
+
+    public void resetPassword(String rawToken, String newPassword) {
+        VerificationToken token = findValidToken(rawToken, TokenType.PASSWORD_RESET);
+
+        token.setUsed(true);
+        tokenRepository.save(token);
+
+        User user = token.getUser();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        log.info("Password reset successfully for: {}", user.getEmail());
+    }
+
+    // SHARED HELPER
+
+    private VerificationToken findValidToken(String rawToken, TokenType expectedType) {
+        VerificationToken token = tokenRepository.findByToken(rawToken)
+                .orElseThrow(() -> new RuntimeException("Lien invalide ou inexistant"));
+
+        if (token.isUsed()) {
+            throw new RuntimeException("Ce lien a déjà été utilisé");
+        }
+
+        if (token.isExpired()) {
+            throw new RuntimeException("Ce lien a expiré. Faites une nouvelle demande.");
+        }
+
+        if (token.getType() != expectedType) {
+            throw new RuntimeException("Type de lien invalide");
+        }
+
+        return token;
     }
 }

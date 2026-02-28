@@ -22,26 +22,17 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final Jwtutil jwtUtil;
-
-    // ── Ajoutés ici grâce à @RequiredArgsConstructor ────────────────
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    // ────────────────────────────────────────────────────────────────
+    private final EmailVerificationService emailVerificationService; // ← NEW
 
-    /**
-     * Inscription d'un nouvel utilisateur + connexion automatique (retourne un token)
-     */
     public AuthResponse register(RegisterRequest request) {
-
-        // Normalisation de l'email (évite doublons admin@test.com / Admin@test.com)
         String email = request.getEmail().toLowerCase().trim();
 
-        // Vérifie unicité
         if (userRepository.existsByEmail(email)) {
             throw new RuntimeException("Cet email est déjà utilisé");
         }
 
-        // Crée l'utilisateur
         User user = User.builder()
                 .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -51,24 +42,31 @@ public class AuthService {
                 .emailVerified(false)
                 .build();
 
-        // Sauvegarde
         user = userRepository.save(user);
 
-        // Génère le token (avec l'email comme subject)
-        String token = jwtUtil.generateToken(user.getEmail());
+        // ✅ Send verification email after saving
+        emailVerificationService.sendVerificationEmail(user);
 
-        // Rôle avec prefixe ROLE_ (cohérent avec Spring Security)
+        // Return token — user is logged in but email not yet verified
+        // Your frontend should show a "please verify your email" banner
+        String token = jwtUtil.generateToken(user.getEmail());
         String role = "ROLE_" + user.getRole().name();
 
         return new AuthResponse(token, user.getEmail(), role);
     }
 
-    /**
-     * Authentification (login) – ta méthode existante, légèrement améliorée
-     */
     public AuthResponse authenticate(String email, String password) {
+        // ── Optional: block unverified users from logging in ──────────
+        // Uncomment this block once email flow is tested end-to-end:
+        //
+        // User user = userRepository.findByEmail(email)
+        //     .orElseThrow(() -> new RuntimeException("Email ou mot de passe incorrect"));
+        // if (!user.isEmailVerified()) {
+        //     throw new RuntimeException("Veuillez vérifier votre email avant de vous connecter");
+        // }
+        // ──────────────────────────────────────────────────────────────
+
         try {
-            // Authentifie via Spring Security
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(email, password)
             );
@@ -76,13 +74,9 @@ public class AuthService {
             throw new RuntimeException("Email ou mot de passe incorrect");
         }
 
-        // Charge les détails de l'utilisateur
         final UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-
-        // Génère le token
         String token = jwtUtil.generateToken(userDetails.getUsername());
 
-        // Récupère le rôle principal (avec ROLE_)
         String role = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .findFirst()
