@@ -36,21 +36,33 @@ public class SecurityConfig {
 
                 // Autorisations explicites
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()// public
+                        // Public total (login, register, verify, swagger, etc.)
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+//HttpMethod.GET,
+                        // GET sur content → public (listing + détail)
+                        .requestMatchers("/api/content/**").permitAll()
 
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")     // ADMIN only
-                        .requestMatchers("/api/users/**").hasRole("ADMIN")     // ADMIN only
-                        .requestMatchers("/api/courses/**").hasAnyRole("USER", "ADMIN") // les deux
-                        .requestMatchers(HttpMethod.GET, "/api/content", "/api/content/**").permitAll()  // public listing
-                        .requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .anyRequest().authenticated()// reste = connecté
+                        // POST, PUT, DELETE sur content → ADMIN seulement
+                        .requestMatchers(HttpMethod.POST, "/api/content").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/content/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/content/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.GET, "/api/courses", "/api/courses/**").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/api/courses").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.PUT, "/api/courses/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.DELETE, "/api/courses/**").hasRole("ADMIN")
+                        // Autres règles que tu avais
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/users/**").hasRole("ADMIN")
+                        .requestMatchers("/api/courses/**").hasAnyRole("USER", "ADMIN")
+
+                        // Tout le reste → nécessite juste d’être connecté (pas forcément ADMIN)
+                        .anyRequest().authenticated()
                 )
 
-                // Pas de session, pas de cookie JSSESSIONID
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-
                 // Filtre JWT en premier
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

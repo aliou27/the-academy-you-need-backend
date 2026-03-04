@@ -18,18 +18,15 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    // ==========================
-    // CREATE / REGISTER
-    // ==========================
     public UserDTO registerUser(UserDTO userDTO) {
-
         if (userRepository.existsByEmail(userDTO.getEmail())) {
             throw new IllegalArgumentException("Email already exists");
         }
 
         User user = User.builder()
                 .email(userDTO.getEmail())
-                .password(passwordEncoder.encode(userDTO.getPassword()))   // si LoginRequest a password                .firstName(userDTO.getFirstName())
+                .password(passwordEncoder.encode(userDTO.getPassword()))
+                .firstName(userDTO.getFirstName())
                 .lastName(userDTO.getLastName())
                 .role(User.Role.USER)
                 .emailVerified(false)
@@ -38,9 +35,6 @@ public class UserService {
         return toDTO(userRepository.save(user));
     }
 
-    // ==========================
-    // READ
-    // ==========================
     @Transactional(readOnly = true)
     public List<UserDTO> getAllUsers() {
         return userRepository.findAll()
@@ -54,53 +48,34 @@ public class UserService {
         return toDTO(findUserOrThrow(id));
     }
 
-    // ==========================
-    // UPDATE
-    // ==========================
     public UserDTO updateUser(Long id, String firstName, String lastName) {
-
         User user = findUserOrThrow(id);
-
-        if (firstName != null && !firstName.isBlank()) {
-            user.setFirstName(firstName);
-        }
-
-        if (lastName != null && !lastName.isBlank()) {
-            user.setLastName(lastName);
-        }
-
+        if (firstName != null && !firstName.isBlank()) user.setFirstName(firstName);
+        if (lastName != null && !lastName.isBlank()) user.setLastName(lastName);
         return toDTO(user);
     }
 
-    // ==========================
-    // DELETE
-    // ==========================
     public void deleteUser(Long id) {
-
         if (!userRepository.existsById(id)) {
             throw new IllegalArgumentException("User not found with id: " + id);
         }
-
         userRepository.deleteById(id);
     }
 
-    // ==========================
-    // PRIVATE HELPERS
-    // ==========================
     private User findUserOrThrow(Long id) {
         return userRepository.findById(id)
-                .orElseThrow(() ->
-                        new IllegalArgumentException("User not found with id: " + id));
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + id));
     }
 
     private UserDTO toDTO(User user) {
         return new UserDTO(
                 user.getId(),
                 user.getEmail(),
+                null,
                 user.getFirstName(),
                 user.getLastName(),
                 user.getRole() != null ? user.getRole().name() : null,
-                (Boolean) user.isEmailVerified(),
+                user.isEmailVerified(),
                 user.getCreatedAt() != null ? user.getCreatedAt().toString() : null,
                 user.getUpdatedAt() != null ? user.getUpdatedAt().toString() : null
         );
