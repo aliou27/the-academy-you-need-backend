@@ -47,14 +47,6 @@ public class User {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
-    public Object getEmailVerified() {
-        return  emailVerified;
-    }
-
-    public Object isEmailVerified() {
-        return emailVerified;
-    }
-
     public enum Role {
         USER, ADMIN
     }

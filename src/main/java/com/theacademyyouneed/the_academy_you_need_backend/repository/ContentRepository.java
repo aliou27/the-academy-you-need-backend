@@ -1,4 +1,3 @@
-// ── ContentRepository.java ──────────────────────────────────────────────────
 package com.theacademyyouneed.the_academy_you_need_backend.repository;
 
 import com.theacademyyouneed.the_academy_you_need_backend.entity.Content;
@@ -26,6 +25,4 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
             ContentType type, AccessLevel accessLevel, Pageable pageable);
 }
 
-// ── CategoryRepository.java ─────────────────────────────────────────────────
-// Create this as a SEPARATE FILE in the repository package
 
